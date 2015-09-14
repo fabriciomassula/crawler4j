@@ -335,6 +335,8 @@ public class PageFetcher extends Configurable {
 		return new HttpGet(url);
 	}
 
-
+	public CloseableHttpClient getHttpClient() {
+		return httpClient;
+	}
 
 }
