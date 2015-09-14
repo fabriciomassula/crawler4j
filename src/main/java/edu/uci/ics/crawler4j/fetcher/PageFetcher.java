@@ -20,6 +20,7 @@ package edu.uci.ics.crawler4j.fetcher;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import java.util.List;
 import javax.net.ssl.SSLContext;
 
 import edu.uci.ics.crawler4j.crawler.authentication.NtAuthInfo;
+
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -47,6 +49,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
@@ -217,7 +220,15 @@ public class PageFetcher extends Configurable {
     }
   }
 
+  @Deprecated
   public PageFetchResult fetchPage(WebURL webUrl)
+	      throws InterruptedException, IOException, PageBiggerThanMaxSizeException {
+	  
+	  return this.fetchPage(webUrl, 1);
+	  
+  }
+  
+  public PageFetchResult fetchPage(WebURL webUrl, Integer attempt)
       throws InterruptedException, IOException, PageBiggerThanMaxSizeException {
     // Getting URL, setting headers & content
     PageFetchResult fetchResult = new PageFetchResult();
@@ -284,7 +295,22 @@ public class PageFetcher extends Configurable {
       fetchResult.setStatusCode(statusCode);
       return fetchResult;
 
-    } finally { // occurs also with thrown exceptions
+    } catch (SocketTimeoutException e) {
+		
+		logger.error("Timeout error while fetching " + toFetchURL
+				+ " (link found in doc #" + webUrl.getParentDocid() + ")");
+		
+		logger.error("proxy: " + httpClient.getParams().getParameter(ConnRoutePNames.DEFAULT_PROXY));
+		
+		if(attempt < 10) {
+			logger.error("Trying again, attempt: " + attempt++);
+			return fetchPage(webUrl, attempt++);
+		} else {
+		      fetchResult.setStatusCode(HttpStatus.SC_REQUEST_TIMEOUT);
+			return fetchResult;
+		}
+		
+	} finally { // occurs also with thrown exceptions
       if ((fetchResult.getEntity() == null) && (request != null)) {
         request.abort();
       }
