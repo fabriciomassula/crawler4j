@@ -29,11 +29,8 @@ import java.util.List;
 
 import javax.net.ssl.SSLContext;
 
-import edu.uci.ics.crawler4j.crawler.authentication.NtAuthInfo;
-
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.auth.AuthScope;
@@ -44,6 +41,7 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -53,6 +51,7 @@ import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLContexts;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -60,7 +59,6 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.ssl.SSLContexts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +67,7 @@ import edu.uci.ics.crawler4j.crawler.CrawlConfig;
 import edu.uci.ics.crawler4j.crawler.authentication.AuthInfo;
 import edu.uci.ics.crawler4j.crawler.authentication.BasicAuthInfo;
 import edu.uci.ics.crawler4j.crawler.authentication.FormAuthInfo;
+import edu.uci.ics.crawler4j.crawler.authentication.NtAuthInfo;
 import edu.uci.ics.crawler4j.crawler.exceptions.PageBiggerThanMaxSizeException;
 import edu.uci.ics.crawler4j.url.URLCanonicalizer;
 import edu.uci.ics.crawler4j.url.WebURL;
@@ -89,7 +88,7 @@ public class PageFetcher extends Configurable {
 		super(config);
 
 		RequestConfig requestConfig =
-				RequestConfig.custom().setExpectContinueEnabled(false).setCookieSpec(CookieSpecs.DEFAULT)
+				RequestConfig.custom().setExpectContinueEnabled(false).setCookieSpec(CookieSpecs.STANDARD)
 				.setRedirectsEnabled(false).setSocketTimeout(config.getSocketTimeout())
 				.setConnectTimeout(config.getConnectionTimeout()).build();
 
@@ -124,8 +123,8 @@ public class PageFetcher extends Configurable {
 		clientBuilder.setUserAgent(config.getUserAgentString());
 		clientBuilder.setDefaultHeaders(config.getDefaultHeaders());
 		
-		if(this.config.getHttpRequestInterceptor() != null) clientBuilder.addInterceptorFirst(this.config.getHttpRequestInterceptor());
-		if(this.config.getHttpResponseInterceptor() != null) clientBuilder.addInterceptorFirst(this.config.getHttpResponseInterceptor());
+		if(this.config.getHttpRequestInterceptor() != null) clientBuilder.addInterceptorLast(this.config.getHttpRequestInterceptor());
+		if(this.config.getHttpResponseInterceptor() != null) clientBuilder.addInterceptorLast(this.config.getHttpResponseInterceptor());
 
 		if (config.getProxyHost() != null) {
 			if (config.getProxyUsername() != null) {
