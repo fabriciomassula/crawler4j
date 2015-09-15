@@ -23,6 +23,9 @@ import java.util.HashSet;
 import java.util.List;
 
 import org.apache.http.Header;
+import org.apache.http.HttpRequestInterceptor;
+import org.apache.http.HttpResponseInterceptor;
+import org.apache.http.client.ResponseHandler;
 import org.apache.http.message.BasicHeader;
 
 import edu.uci.ics.crawler4j.crawler.authentication.AuthInfo;
@@ -164,6 +167,17 @@ public class CrawlConfig {
    */
   private List<AuthInfo> authInfos;
 
+  
+  /**
+   * Adding http RequestInterceptor
+   */
+  protected HttpRequestInterceptor httpRequestInterceptor;
+  
+  /**
+   * Adding http ResponseInterceptor
+   */
+  protected HttpResponseInterceptor httpResponseInterceptor;
+  
   /**
    * Validates the configs specified by this instance.
    *
@@ -494,8 +508,26 @@ public class CrawlConfig {
   public void setAuthInfos(List<AuthInfo> authInfos) {
     this.authInfos = authInfos;
   }
+  
+  public HttpRequestInterceptor getHttpRequestInterceptor() {
+	  return httpRequestInterceptor;
+  }
 
-  @Override
+  public void setHttpRequestInterceptor(
+		  HttpRequestInterceptor httpRequestInterceptor) {
+	  this.httpRequestInterceptor = httpRequestInterceptor;
+  }
+
+  public HttpResponseInterceptor getHttpResponseInterceptor() {
+	  return httpResponseInterceptor;
+  }
+
+  public void setHttpResponseInterceptor(
+		  HttpResponseInterceptor httpResponseInterceptor) {
+	  this.httpResponseInterceptor = httpResponseInterceptor;
+  }
+
+@Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("Crawl storage folder: " + getCrawlStorageFolder() + "\n");
