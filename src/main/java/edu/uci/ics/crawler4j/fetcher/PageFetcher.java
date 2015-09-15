@@ -83,10 +83,13 @@ public class PageFetcher extends Configurable {
 	protected final Object mutex = new Object();
 	protected long lastFetchTime = 0;
 	protected IdleConnectionMonitorThread connectionMonitorThread = null;
+	protected int timeoutAttempts = 1;
 
 	public PageFetcher(CrawlConfig config) {
 		super(config);
 
+		timeoutAttempts = config.getTimeoutAttempts();
+		
 		RequestConfig requestConfig =
 				RequestConfig.custom().setExpectContinueEnabled(false).setCookieSpec(CookieSpecs.STANDARD)
 				.setRedirectsEnabled(false).setSocketTimeout(config.getSocketTimeout())
@@ -116,12 +119,13 @@ public class PageFetcher extends Configurable {
 		connectionManager = new PoolingHttpClientConnectionManager(connRegistry);
 		connectionManager.setMaxTotal(config.getMaxTotalConnections());
 		connectionManager.setDefaultMaxPerRoute(config.getMaxConnectionsPerHost());
-
+		
 		HttpClientBuilder clientBuilder = HttpClientBuilder.create();
 		clientBuilder.setDefaultRequestConfig(requestConfig);
 		clientBuilder.setConnectionManager(connectionManager);
 		clientBuilder.setUserAgent(config.getUserAgentString());
 		clientBuilder.setDefaultHeaders(config.getDefaultHeaders());
+		clientBuilder.setDefaultCredentialsProvider(config.getCredentialsProvider());
 		
 		if(this.config.getHttpRequestInterceptor() != null) clientBuilder.addInterceptorLast(this.config.getHttpRequestInterceptor());
 		if(this.config.getHttpResponseInterceptor() != null) clientBuilder.addInterceptorLast(this.config.getHttpResponseInterceptor());
@@ -222,9 +226,7 @@ public class PageFetcher extends Configurable {
 		}
 	}
 
-	@Deprecated
-	public PageFetchResult fetchPage(WebURL webUrl)
-			throws InterruptedException, IOException, PageBiggerThanMaxSizeException {
+	public PageFetchResult fetchPage(WebURL webUrl) throws InterruptedException, IOException, PageBiggerThanMaxSizeException {
 
 		return this.fetchPage(webUrl, 1);
 
@@ -297,21 +299,6 @@ public class PageFetcher extends Configurable {
 			fetchResult.setStatusCode(statusCode);
 			return fetchResult;
 
-		} catch (SocketTimeoutException e) {
-
-			logger.error("Timeout error while fetching " + toFetchURL
-					+ " (link found in doc #" + webUrl.getParentDocid() + ")");
-
-			logger.error("proxy: " + httpClient.getParams().getParameter(ConnRoutePNames.DEFAULT_PROXY));
-
-			if(attempt < 10) {
-				logger.error("Trying again, attempt: " + attempt++);
-				return fetchPage(webUrl, attempt++);
-			} else {
-				fetchResult.setStatusCode(HttpStatus.SC_REQUEST_TIMEOUT);
-				return fetchResult;
-			}
-
 		} finally { // occurs also with thrown exceptions
 			if ((fetchResult.getEntity() == null) && (request != null)) {
 				request.abort();
@@ -341,4 +328,12 @@ public class PageFetcher extends Configurable {
 		return httpClient;
 	}
 
+	public int getTimeoutAttempts() {
+		return timeoutAttempts;
+	}
+
+	public void setTimeoutAttempts(int timeoutAttempts) {
+		this.timeoutAttempts = timeoutAttempts;
+	}
+	
 }

@@ -17,6 +17,7 @@
 
 package edu.uci.ics.crawler4j.crawler;
 
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -24,6 +25,9 @@ import java.util.Locale;
 import org.apache.http.HttpStatus;
 import org.apache.http.impl.EnglishReasonPhraseCatalog;
 
+import uk.org.lidalia.slf4jext.Level;
+import uk.org.lidalia.slf4jext.Logger;
+import uk.org.lidalia.slf4jext.LoggerFactory;
 import edu.uci.ics.crawler4j.crawler.exceptions.ContentFetchException;
 import edu.uci.ics.crawler4j.crawler.exceptions.PageBiggerThanMaxSizeException;
 import edu.uci.ics.crawler4j.crawler.exceptions.ParseException;
@@ -37,9 +41,6 @@ import edu.uci.ics.crawler4j.parser.ParseData;
 import edu.uci.ics.crawler4j.parser.Parser;
 import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 import edu.uci.ics.crawler4j.url.WebURL;
-import uk.org.lidalia.slf4jext.Level;
-import uk.org.lidalia.slf4jext.Logger;
-import uk.org.lidalia.slf4jext.LoggerFactory;
 
 /**
  * WebCrawler class in the Runnable class that is executed by each crawler thread.
@@ -187,6 +188,15 @@ public class WebCrawler implements Runnable {
   protected void onPageBiggerThanMaxSize(String urlStr, long pageSize) {
     logger.warn("Skipping a URL: {} which was bigger ( {} ) than max allowed size", urlStr, pageSize);
   }
+  
+  /**
+   * This function is called if, after all attempts, we still got a timeout.
+   *
+   * @param urlStr - The URL which timed out
+   */
+  protected void onSocketTimeout(String urlStr) {
+    logger.warn("SocketTimeout after all attempts: {}", urlStr);
+  }
 
   /**
    * This function is called if the crawler encountered an unexpected http status code ( a status code other than 3xx)
@@ -313,7 +323,12 @@ public class WebCrawler implements Runnable {
     // Sub-classed should override this to add their custom functionality
   }
 
+  
   private void processPage(WebURL curURL) {
+	  this.processPage(curURL, 1);
+  }
+  
+  private void processPage(WebURL curURL, int attempt) {
     PageFetchResult fetchResult = null;
     try {
       if (curURL == null) {
@@ -420,6 +435,19 @@ public class WebCrawler implements Runnable {
 
         visit(page);
       }
+    } catch (SocketTimeoutException e) {
+    	
+    	logger.error("Timeout error while fetching " + curURL.getURL());
+
+    	if(attempt < this.pageFetcher.getTimeoutAttempts()) {
+			logger.error("Trying again, because didn't reached max attempts...");
+
+    		this.processPage(curURL, attempt++);
+    	} else {
+    		logger.error("Reached max attempts!");
+        	onSocketTimeout(curURL.getURL());
+    	}
+    	
     } catch (PageBiggerThanMaxSizeException e) {
       onPageBiggerThanMaxSize(curURL.getURL(), e.getPageSize());
     } catch (ParseException pe) {

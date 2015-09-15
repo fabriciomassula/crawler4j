@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.http.Header;
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponseInterceptor;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.message.BasicHeader;
 
@@ -177,6 +178,15 @@ public class CrawlConfig {
    * Adding http ResponseInterceptor
    */
   protected HttpResponseInterceptor httpResponseInterceptor;
+  
+  /**
+   * Maximum number of attempts in case of timeout 
+   * exception while fetching a page
+   */
+  private int timeoutAttempts = 1;
+  
+  
+  private CredentialsProvider credentialsProvider;
   
   /**
    * Validates the configs specified by this instance.
@@ -525,6 +535,22 @@ public class CrawlConfig {
   public void setHttpResponseInterceptor(
 		  HttpResponseInterceptor httpResponseInterceptor) {
 	  this.httpResponseInterceptor = httpResponseInterceptor;
+  }
+  
+  public int getTimeoutAttempts() {
+	  return timeoutAttempts;
+  }
+
+  public void setTimeoutAttempts(int timeoutAttempts) {
+	  this.timeoutAttempts = timeoutAttempts;
+  }
+  
+  public CredentialsProvider getCredentialsProvider() {
+	  return credentialsProvider;
+  }
+
+  public void setCredentialsProvider(CredentialsProvider credentialsProvider) {
+	  this.credentialsProvider = credentialsProvider;
   }
 
 @Override
