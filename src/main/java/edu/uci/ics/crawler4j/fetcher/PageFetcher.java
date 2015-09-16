@@ -20,7 +20,6 @@ package edu.uci.ics.crawler4j.fetcher;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
-import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -47,7 +46,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
@@ -59,6 +57,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,9 +91,13 @@ public class PageFetcher extends Configurable {
 		timeoutAttempts = config.getTimeoutAttempts();
 		
 		RequestConfig requestConfig =
-				RequestConfig.custom().setExpectContinueEnabled(false).setCookieSpec(CookieSpecs.STANDARD)
-				.setRedirectsEnabled(false).setSocketTimeout(config.getSocketTimeout())
-				.setConnectTimeout(config.getConnectionTimeout()).build();
+				RequestConfig.custom()
+				.setExpectContinueEnabled(false)
+				.setCookieSpec(CookieSpecs.BROWSER_COMPATIBILITY)
+				.setRedirectsEnabled(false)
+				.setSocketTimeout(config.getSocketTimeout())
+				.setConnectTimeout(config.getConnectionTimeout())
+				.build();
 
 		RegistryBuilder<ConnectionSocketFactory> connRegistryBuilder = RegistryBuilder.create();
 		connRegistryBuilder.register("http", PlainConnectionSocketFactory.INSTANCE);
@@ -145,6 +149,7 @@ public class PageFetcher extends Configurable {
 		}
 
 		httpClient = clientBuilder.build();
+		
 		if ((config.getAuthInfos() != null) && !config.getAuthInfos().isEmpty()) {
 			doAuthetication(config.getAuthInfos());
 		}
@@ -238,8 +243,10 @@ public class PageFetcher extends Configurable {
 		PageFetchResult fetchResult = new PageFetchResult();
 		String toFetchURL = webUrl.getURL();
 		HttpUriRequest request = null;
+		HttpContext localContext = null;
 		try {
 			request = newHttpUriRequest(toFetchURL);
+			localContext = newHttpContext();
 			// Applying Politeness delay
 			synchronized (mutex) {
 				long now = (new Date()).getTime();
@@ -249,7 +256,7 @@ public class PageFetcher extends Configurable {
 				lastFetchTime = (new Date()).getTime();
 			}
 
-			CloseableHttpResponse response = httpClient.execute(request);
+			CloseableHttpResponse response = httpClient.execute(request, localContext);
 			fetchResult.setEntity(response.getEntity());
 			fetchResult.setResponseHeaders(response.getAllHeaders());
 
@@ -323,10 +330,20 @@ public class PageFetcher extends Configurable {
 	protected HttpUriRequest newHttpUriRequest(String url) {
 		return new HttpGet(url);
 	}
-
-	public CloseableHttpClient getHttpClient() {
-		return httpClient;
+	
+	/**
+	 * Creates a new HttpContext. The default is to create a HttpContext without
+	 * any further configuration. Subclasses may override this method and provide their own logic.
+	 *
+	 * @return the HttpContext for the given url
+	 */
+	protected HttpContext newHttpContext() {
+		return new BasicHttpContext();
 	}
+
+//	public CloseableHttpClient getHttpClient() {
+//		return httpClient;
+//	}
 
 	public int getTimeoutAttempts() {
 		return timeoutAttempts;
