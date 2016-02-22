@@ -115,6 +115,12 @@ public class CrawlConfig {
   private int maxOutgoingLinksToFollow = 5000;
 
   /**
+   * Number of URLs do fetch from frontier each time the crawler calls getNextURLs
+   */
+  private int maxUrlsToFetchFromFrontier = 50;
+  
+
+  /**
    * Max allowed size of a page. Pages larger than this size will not be
    * fetched.
    */
@@ -551,6 +557,14 @@ public class CrawlConfig {
 
   public void setCredentialsProvider(CredentialsProvider credentialsProvider) {
 	  this.credentialsProvider = credentialsProvider;
+  }
+  
+  public int getMaxUrlsToFetchFromFrontier() {
+	return maxUrlsToFetchFromFrontier;
+  }
+
+  public void setMaxUrlsToFetchFromFrontier(int maxUrlsToFetchFromFrontier) {
+	this.maxUrlsToFetchFromFrontier = maxUrlsToFetchFromFrontier;
   }
 
 @Override
